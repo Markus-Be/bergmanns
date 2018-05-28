@@ -1,3 +1,5 @@
+#!bin/python3
+import sys
 import configparser
 import requests
 from datetime import datetime, time, timedelta
@@ -23,7 +25,7 @@ umorgen = int(uemorgen.timestamp())
 
 sitemorgen = {'m': '2;1', 'sel_type': 'day', 'sel_date': morgen}
 
-class bcolors:
+class color:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
     OKGREEN = '\033[92m'
@@ -119,27 +121,30 @@ def get_namen(site):
     bestellung_text = bs.findAll('td',attrs={'class':'bestellungen_menu'})
     text = []
     for i in bestellung_text:
-        text = print(''.join(i))
-    #return text
+        text.extend(i)
+    return text
 
-def main(domain, data):
-    print(bcolors.HEADER,'Moment ich sehe kurz für dich nach',bcolors.ENDC)
+if __name__ == "__main__":
+    print(color.HEADER,'Moment ich sehe kurz für dich nach',color.ENDC)
     heute = datetime.combine(datetime.today(), time.min)
     morgen = heute + timedelta(days=1)
-    cookie = login(domain, data).cookies
+    login = login(domain, data)
+    if login.status_code != 200:
+        print(color.FAIL+'HTTP STATUSCODE == '+login.status_code+color.ENDC)
+        sys.exit()
+    cookie = login.cookies
     liste = [heute, morgen]
     for i in liste:
         intday = int(i.timestamp())
         parsed = get_day(domain, cookie, intday)
-        print('Du hast am ',bcolors.BOLD,i,bcolors.ENDC,' folgendes bestellt')
-        essen = get_namen(parsed)
-        if  essen == None :
-            print(bcolors.FAIL,'Du hast noch nicht bestellt',bcolors.ENDC)
+        if parsed.status_code == 200:
+            print('Du hast am '+color.BOLD,i,color.ENDC+' folgendes bestellt')
+            essen = get_namen(parsed)
+            if not essen:
+                print(color.WARNING+'Du hast noch nicht bestellt'+color.ENDC)
+            else:
+                print(color.OKBLUE+'\n'.join(essen)+color.ENDC)
         else:
-            print(bcolors.OKGREEN,essen,bcolors.ENDC)
+            print(color.FAIL+'Fehler beim Verbindungsaufbau'+color.ENDC)
     logout(cookie)
-
-
-if __name__ == "__main__":
-    main(domain, data)
 
